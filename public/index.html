@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>registry — apps & APIs for builders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0E14;
+    --panel: #10151D;
+    --panel-hover: #141B25;
+    --border: #1C2733;
+    --border-light: #263240;
+    --text: #E8ECF1;
+    --text-dim: #7C8B9E;
+    --text-dimmer: #4D5A6B;
+    --accent: #5EEAD4;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --accent-glow: rgba(94, 234, 212, 0.25);
+    --warn: #F0B255;
+    --danger: #F0746A;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(94, 234, 212, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(94, 234, 212, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 40%, transparent 75%);
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+  .hidden { display: none !important; }
+
+  /* ===== NAV ===== */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 14, 20, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1180px; margin: 0 auto; padding: 0 32px;
+    height: 64px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    font-family: var(--mono); font-weight: 700; font-size: 16px;
+    display: flex; align-items: center; gap: 8px; letter-spacing: -0.02em;
+    background: none; border: none; color: var(--text); padding: 0;
+  }
+  .logo .bracket { color: var(--accent); }
+  .nav-links { display: flex; gap: 32px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a, .nav-links button {
+    background: none; border: none; color: var(--text-dim); font-size: 14px; padding: 0;
+    transition: color 0.15s ease;
+  }
+  .nav-links a:hover, .nav-links button:hover { color: var(--text); }
+  .nav-cta { display: flex; align-items: center; gap: 16px; }
+  .btn {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    padding: 9px 18px; border-radius: 6px; border: 1px solid var(--border-light);
+    background: transparent; color: var(--text); transition: all 0.15s ease;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #06201C; border: 1px solid var(--accent); }
+  .btn-primary:hover { box-shadow: 0 0 0 3px var(--accent-glow); color: #06201C; }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .user-pill {
+    font-family: var(--mono); font-size: 13px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* ===== HERO ===== */
+  .hero { padding: 88px 0 72px; position: relative; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 13px; color: var(--accent);
+    display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+  }
+  .eyebrow::before {
+    content: ''; width: 6px; height: 6px; background: var(--accent); border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent); animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  h1 {
+    font-family: var(--mono); font-size: clamp(36px, 5.5vw, 64px); font-weight: 800;
+    line-height: 1.05; letter-spacing: -0.03em; max-width: 820px;
+  }
+  h1 .dim { color: var(--text-dimmer); }
+  .hero-sub { margin-top: 24px; font-size: 18px; color: var(--text-dim); max-width: 560px; line-height: 1.6; }
+
+  .term {
+    margin-top: 48px; max-width: 640px; background: var(--panel);
+    border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.5);
+  }
+  .term-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.015);
+  }
+  .term-dots { display: flex; gap: 6px; }
+  .term-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--border-light); }
+  .term-tabs { display: flex; gap: 4px; }
+  .term-tab {
+    font-family: var(--mono); font-size: 12px; padding: 5px 12px; border-radius: 5px;
+    color: var(--text-dim); background: transparent; border: none; transition: all 0.15s ease;
+  }
+  .term-tab.active { background: var(--accent-dim); color: var(--accent); }
+  .term-body { padding: 20px 18px; font-family: var(--mono); font-size: 14px; min-height: 96px; }
+  .term-line { color: var(--text-dim); }
+  .term-line .prompt { color: var(--accent); margin-right: 8px; }
+  .term-line .cmd { color: var(--text); }
+  .term-out { color: var(--text-dimmer); margin-top: 8px; display: block; }
+  .term-out .ok { color: var(--accent); }
+  .term-cursor {
+    display: inline-block; width: 7px; height: 15px; background: var(--accent);
+    margin-left: 6px; vertical-align: -2px; animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .hero-stats { display: flex; gap: 40px; margin-top: 56px; flex-wrap: wrap; }
+  .stat-num { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--text); }
+  .stat-label { font-size: 13px; color: var(--text-dimmer); margin-top: 4px; }
+
+  /* ===== SECTIONS ===== */
+  .section { padding: 88px 0; border-top: 1px solid var(--border); }
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 40px; flex-wrap: wrap; gap: 16px;
+  }
+  .section-tag { font-family: var(--mono); font-size: 13px; color: var(--text-dimmer); }
+  h2 { font-family: var(--mono); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; margin-top: 6px; }
+  .section-desc { color: var(--text-dim); font-size: 15px; max-width: 460px; }
+
+  .filters { display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+  .filter-pill {
+    font-family: var(--mono); font-size: 13px; padding: 8px 16px; border-radius: 20px;
+    border: 1px solid var(--border-light); background: var(--panel); color: var(--text-dim);
+    transition: all 0.15s ease;
+  }
+  .filter-pill:hover { color: var(--text); border-color: var(--text-dim); }
+  .filter-pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 24px; transition: all 0.18s ease; display: flex; flex-direction: column; gap: 14px;
+  }
+  .card:hover { border-color: var(--border-light); background: var(--panel-hover); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .card-icon {
+    width: 38px; height: 38px; border-radius: 8px; background: var(--accent-dim);
+    display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+  }
+  .card-type {
+    font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 4px;
+    border: 1px solid var(--border-light); color: var(--text-dimmer); white-space: nowrap;
+  }
+  .card-type.api { color: var(--warn); border-color: rgba(240, 178, 85, 0.3); }
+  .card-type.app { color: var(--accent); border-color: rgba(94, 234, 212, 0.3); }
+  .card-name { font-family: var(--mono); font-size: 16px; font-weight: 600; }
+  .card-desc { color: var(--text-dim); font-size: 14px; line-height: 1.55; flex-grow: 1; }
+  .card-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .card-price { font-family: var(--mono); font-size: 15px; font-weight: 700; }
+  .card-price .unit { font-size: 12px; color: var(--text-dimmer); font-weight: 400; }
+
+  /* ===== AUTH MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(5, 7, 11, 0.7);
+    backdrop-filter: blur(4px); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border-light); border-radius: 12px;
+    width: 100%; max-width: 400px; padding: 32px;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.6);
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .modal-head h3 { font-family: var(--mono); font-size: 18px; }
+  .modal-close { background: none; border: none; color: var(--text-dim); font-size: 20px; line-height: 1; padding: 4px; }
+  .modal-close:hover { color: var(--text); }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-bottom: 7px; }
+  .field input {
+    width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-light);
+    border-radius: 6px; color: var(--text); font-family: var(--sans); font-size: 14px;
+  }
+  .field input:focus { border-color: var(--accent); outline: none; }
+  .modal-error {
+    background: rgba(240, 116, 106, 0.1); border: 1px solid rgba(240, 116, 106, 0.3);
+    color: var(--danger); font-size: 13px; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px;
+  }
+  .modal-switch { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-dimmer); }
+  .modal-switch button { background: none; border: none; color: var(--accent); font-size: 13px; padding: 0; }
+
+  /* ===== ACCOUNT VIEW ===== */
+  .account-view { padding: 48px 0; }
+  .account-tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid var(--border); }
+  .account-tab {
+    background: none; border: none; padding: 12px 4px; margin-right: 24px;
+    font-family: var(--mono); font-size: 14px; color: var(--text-dim);
+    border-bottom: 2px solid transparent; transition: all 0.15s ease;
+  }
+  .account-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left; font-family: var(--mono); font-size: 12px; color: var(--text-dimmer);
+    padding: 10px 16px; border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  .data-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .data-table tr:hover { background: var(--panel); }
+  .status-badge {
+    font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 10px;
+  }
+  .status-badge.active { background: var(--accent-dim); color: var(--accent); }
+  .status-badge.pending { background: rgba(240, 178, 85, 0.12); color: var(--warn); }
+  .status-badge.revoked, .status-badge.canceled { background: rgba(240, 116, 106, 0.12); color: var(--danger); }
+  .key-display { font-family: var(--mono); font-size: 13px; color: var(--text-dim); }
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text-dimmer);
+    font-family: var(--mono); font-size: 14px;
+  }
+
+  /* ===== PRICING ===== */
+  .pricing-term { background: var(--panel); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+  .pricing-term-head {
+    display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+    border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 13px; color: var(--text-dimmer);
+  }
+  .pricing-term-head .dots span {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--border-light); display: inline-block; margin-right: 5px;
+  }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .plan { padding: 32px 28px; border-right: 1px solid var(--border); position: relative; }
+  .plan:last-child { border-right: none; }
+  .plan.featured { background: rgba(94, 234, 212, 0.03); }
+  .plan-flag {
+    position: absolute; top: 0; right: 0; font-family: var(--mono); font-size: 10px;
+    color: #06201C; background: var(--accent); padding: 4px 10px; border-radius: 0 0 0 8px;
+    font-weight: 700; letter-spacing: 0.05em;
+  }
+  .plan-name { font-family: var(--mono); font-size: 13px; color: var(--text-dimmer); margin-bottom: 16px; }
+  .plan-name::before { content: '$ tier --'; color: var(--text-dimmer); }
+  .plan-price { font-family: var(--mono); font-size: 36px; font-weight: 800; display: flex; align-items: baseline; gap: 6px; }
+  .plan-price .per { font-size: 14px; color: var(--text-dimmer); font-weight: 500; }
+  .plan-list { list-style: none; margin-top: 24px; display: flex; flex-direction: column; gap: 11px; }
+  .plan-list li { font-size: 14px; color: var(--text-dim); display: flex; align-items: flex-start; gap: 9px; }
+  .plan-list li::before { content: '+'; font-family: var(--mono); color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .plan-cta { width: 100%; margin-top: 28px; padding: 11px; text-align: center; }
+
+  footer { border-top: 1px solid var(--border); padding: 40px 0; }
+  .footer-bottom {
+    display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer); flex-wrap: wrap; gap: 12px;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--panel);
+    border: 1px solid var(--border-light); border-radius: 8px; padding: 14px 18px;
+    font-size: 14px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5); z-index: 200;
+    max-width: 360px;
+  }
+  .toast.error { border-color: rgba(240, 116, 106, 0.4); color: var(--danger); }
+  .toast.success { border-color: rgba(94, 234, 212, 0.4); color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .nav-links { display: none; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .plan { border-right: none; border-bottom: 1px solid var(--border); }
+    .data-table { font-size: 13px; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 20px; }
+    .nav-inner { padding: 0 20px; }
+    .grid { grid-template-columns: 1fr; }
+    .section { padding: 64px 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <button class="logo" onclick="showView('catalog')"><span class="bracket">{</span>registry<span class="bracket">}</span></button>
+    <div class="nav-links">
+      <button onclick="showView('catalog')">Catalog</button>
+      <button onclick="document.getElementById('pricing').scrollIntoView()">Pricing</button>
+      <button onclick="showView('account')">My account</button>
+    </div>
+    <div class="nav-cta" id="navCta">
+      <!-- populated by renderNav() -->
+    </div>
+  </div>
+</nav>
+
+<main id="mainContent">
+  <!-- catalog view, account view, etc. injected here -->
+</main>
+
+<div id="toastHost"></div>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>© 2026 registry — built for people who ship.</span>
+      <span id="apiStatus">checking backend…</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ===================== CONFIG =====================
+  const API_BASE = 'http://localhost:4242';
+
+  // ===================== STATE =====================
+  let state = {
+    token: localStorage.getItem('registry_token') || null,
+    user: JSON.parse(localStorage.getItem('registry_user') || 'null'),
+    products: [],
+    currentView: 'catalog',
+    activeFilter: 'all',
+  };
+
+  // ===================== API HELPER =====================
+  async function api(path, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (state.token) headers.Authorization = `Bearer ${state.token}`;
+
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    return data;
+  }
+
+  function toast(message, type = 'success') {
+    const host = document.getElementById('toastHost');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = message;
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ===================== AUTH =====================
+  function setSession(token, user) {
+    state.token = token;
+    state.user = user;
+    localStorage.setItem('registry_token', token);
+    localStorage.setItem('registry_user', JSON.stringify(user));
+    renderNav();
+    closeModal();
+  }
+
+  function logout() {
+    state.token = null;
+    state.user = null;
+    localStorage.removeItem('registry_token');
+    localStorage.removeItem('registry_user');
+    renderNav();
+    showView('catalog');
+    toast('Signed out.');
+  }
+
+  async function handleAuthSubmit(mode) {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const errorEl = document.getElementById('authError');
+    errorEl.classList.add('hidden');
+
+    try {
+      const data = await api(`/api/auth/${mode}`, {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      setSession(data.token, data.user);
+      toast(mode === 'signup' ? 'Account created.' : 'Signed in.');
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+    }
+  }
+
+  function openAuthModal(mode = 'login') {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'authModalOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-head">
+          <h3>${mode === 'signup' ? 'Create account' : 'Sign in'}</h3>
+          <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-error hidden" id="authError"></div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="authPassword" placeholder="${mode === 'signup' ? 'At least 8 characters' : '••••••••'}" autocomplete="${mode === 'signup' ? 'new-password' : 'current-password'}">
+        </div>
+        <button class="btn btn-primary btn-full" id="authSubmitBtn">${mode === 'signup' ? 'Create account' : 'Sign in'}</button>
+        <div class="modal-switch">
+          ${mode === 'signup'
+            ? `Already have an account? <button onclick="closeModal(); openAuthModal('login')">Sign in</button>`
+            : `New here? <button onclick="closeModal(); openAuthModal('signup')">Create an account</button>`}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('authSubmitBtn').onclick = () => handleAuthSubmit(mode);
+    document.getElementById('authPassword').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAuthSubmit(mode);
+    });
+    document.getElementById('authEmail').focus();
+  }
+
+  function closeModal() {
+    const overlay = document.getElementById('authModalOverlay');
+    if (overlay) overlay.remove();
+  }
+
+  function renderNav() {
+    const cta = document.getElementById('navCta');
+    if (state.user) {
+      cta.innerHTML = `
+        <span class="user-pill">${state.user.email}</span>
+        <button class="btn" onclick="logout()">Sign out</button>
+      `;
+    } else {
+      cta.innerHTML = `
+        <button class="btn" onclick="openAuthModal('login')">Sign in</button>
+        <button class="btn btn-primary" onclick="openAuthModal('signup')">Create account</button>
+      `;
+    }
+  }
+
+  // ===================== CHECKOUT =====================
+  async function buyProduct(slug) {
+    if (!state.token) {
+      toast('Sign in first to purchase.', 'error');
+      openAuthModal('login');
+      return;
+    }
+    try {
+      const data = await api(`/api/checkout/${slug}`, { method: 'POST' });
+      window.location.href = data.checkout_url;
+    } catch (err) {
+      // Expected in this demo: no live Stripe key is configured on the backend,
+      // so checkout creation fails server-side. Real deployments set
+      // STRIPE_SECRET_KEY and this redirects to actual Stripe Checkout.
+      toast(`Checkout unavailable: ${err.message}`, 'error');
+    }
+  }
+
+  // ===================== CATALOG =====================
+  async function loadProducts() {
+    try {
+      const data = await api('/api/products');
+      state.products = data.products;
+    } catch (err) {
+      toast('Could not load products from the backend.', 'error');
+      state.products = [];
+    }
+  }
+
+  function formatPrice(p) {
+    if (p.type === 'app_onetime') return { amount: `$${(p.price_cents / 100).toFixed(0)}`, unit: 'once' };
+    if (p.type === 'app_subscription') return { amount: `$${(p.price_cents / 100).toFixed(0)}`, unit: '/mo' };
+    return { amount: `$${(p.price_per_call_cents / 100).toFixed(4)}`, unit: '/call' };
+  }
+
+  function productIcon(slug) {
+    const icons = { 'pixelflow': '▣', 'ledgerly': '◈', 'scopecam': '◫', 'geocode-io': '⚙', 'renderqueue': '⌬', 'signalcheck': '⟁' };
+    return icons[slug] || '◆';
+  }
+
+  function renderCatalogView() {
+    const filtered = state.products.filter((p) => {
+      if (state.activeFilter === 'all') return true;
+      if (state.activeFilter === 'apps') return p.type.startsWith('app');
+      return p.type === 'api_metered';
+    });
+
+    const appsCount = state.products.filter((p) => p.type.startsWith('app')).length;
+    const apisCount = state.products.filter((p) => p.type === 'api_metered').length;
+
+    const cardsHtml = filtered.length
+      ? filtered.map((p) => {
+          const price = formatPrice(p);
+          const isApi = p.type === 'api_metered';
+          return `
+            <div class="card">
+              <div class="card-top">
+                <div class="card-icon">${productIcon(p.slug)}</div>
+                <span class="card-type ${isApi ? 'api' : 'app'}">${isApi ? 'api' : 'app'}</span>
+              </div>
+              <div class="card-name">${p.name}</div>
+              <p class="card-desc">${p.description}</p>
+              <div class="card-foot">
+                <div class="card-price">${price.amount}<span class="unit"> ${price.unit}</span></div>
+                <button class="btn btn-sm btn-primary" onclick="buyProduct('${p.slug}')">${isApi ? 'Get key' : 'Buy'}</button>
+              </div>
+            </div>
+          `;
+        }).join('')
+      : `<div class="empty-state">No products match this filter yet.</div>`;
+
+    return `
+      <header class="hero wrap">
+        <div class="eyebrow">STATUS: ALL SYSTEMS OPERATIONAL</div>
+        <h1>Ship apps.<br>Sell API access.<br><span class="dim">One registry.</span></h1>
+        <p class="hero-sub">A storefront built for builders — list finished apps for one-time purchase, meter your API by the call, and let buyers install in one line.</p>
+
+        <div class="term">
+          <div class="term-head">
+            <div class="term-dots"><span></span><span></span><span></span></div>
+            <div class="term-tabs">
+              <button class="term-tab active" onclick="switchTab(this, 'app')">app</button>
+              <button class="term-tab" onclick="switchTab(this, 'api')">api</button>
+            </div>
+          </div>
+          <div class="term-body" id="termBody">
+            <div class="term-line"><span class="prompt">$</span><span class="cmd">registry install pixelflow</span><span class="term-cursor"></span></div>
+            <span class="term-out">Resolving package... <span class="ok">done</span><br>Installed pixelflow@2.4.1 — license activated</span>
+          </div>
+        </div>
+
+        <div class="hero-stats">
+          <div><div class="stat-num">${state.products.length}</div><div class="stat-label">apps & APIs listed</div></div>
+          <div><div class="stat-num">4.2M</div><div class="stat-label">API calls served / day</div></div>
+          <div><div class="stat-num">99.97%</div><div class="stat-label">uptime, last 90 days</div></div>
+        </div>
+      </header>
+
+      <section class="section" id="catalog">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <div class="section-tag">// catalog</div>
+              <h2>Browse the registry</h2>
+            </div>
+            <p class="section-desc">Finished apps for direct purchase, plus APIs you can wire into your own product today.</p>
+          </div>
+
+          <div class="filters">
+            <button class="filter-pill ${state.activeFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All (${state.products.length})</button>
+            <button class="filter-pill ${state.activeFilter === 'apps' ? 'active' : ''}" onclick="setFilter('apps')">Apps (${appsCount})</button>
+            <button class="filter-pill ${state.activeFilter === 'apis' ? 'active' : ''}" onclick="setFilter('apis')">APIs (${apisCount})</button>
+          </div>
+
+          <div class="grid">${cardsHtml}</div>
+        </div>
+      </section>
+
+      <section class="section" id="pricing">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <div class="section-tag">// pricing</div>
+              <h2>Sell on your terms</h2>
+            </div>
+            <p class="section-desc">Pick the tier that matches how you ship — flat licensing, metered usage, or both.</p>
+          </div>
+
+          <div class="pricing-term">
+            <div class="pricing-term-head">
+              <div class="dots"><span></span><span></span><span></span></div>
+              registry --plans --help
+            </div>
+            <div class="pricing-grid">
+              <div class="plan">
+                <div class="plan-name">starter</div>
+                <div class="plan-price">$0<span class="per">/mo</span></div>
+                <ul class="plan-list">
+                  <li>List up to 2 products</li>
+                  <li>10,000 API calls / mo included</li>
+                  <li>Community support</li>
+                </ul>
+                <button class="btn plan-cta" onclick="openAuthModal('signup')">Start free</button>
+              </div>
+              <div class="plan featured">
+                <div class="plan-flag">MOST USED</div>
+                <div class="plan-name">builder</div>
+                <div class="plan-price">$29<span class="per">/mo</span></div>
+                <ul class="plan-list">
+                  <li>Unlimited products listed</li>
+                  <li>500,000 API calls / mo included</li>
+                  <li>Usage-based billing for buyers</li>
+                  <li>Custom checkout & branding</li>
+                </ul>
+                <button class="btn btn-primary plan-cta" onclick="openAuthModal('signup')">Choose builder</button>
+              </div>
+              <div class="plan">
+                <div class="plan-name">scale</div>
+                <div class="plan-price">custom</div>
+                <ul class="plan-list">
+                  <li>Everything in Builder</li>
+                  <li>Volume-discounted API pricing</li>
+                  <li>Dedicated infra & SLA</li>
+                </ul>
+                <button class="btn plan-cta" onclick="toast('Reach out at sales@registry.dev')">Talk to sales</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function setFilter(f) {
+    state.activeFilter = f;
+    render();
+  }
+
+  function switchTab(btn, type) {
+    document.querySelectorAll('.term-tab').forEach((t) => t.classList.remove('active'));
+    btn.classList.add('active');
+    const body = document.getElementById('termBody');
+    if (type === 'app') {
+      body.innerHTML = `<div class="term-line"><span class="prompt">$</span><span class="cmd">registry install pixelflow</span><span class="term-cursor"></span></div>
+      <span class="term-out">Resolving package... <span class="ok">done</span><br>Installed pixelflow@2.4.1 — license activated</span>`;
+    } else {
+      body.innerHTML = `<div class="term-line"><span class="prompt">$</span><span class="cmd">curl https://api.registry.dev/v1/geocode \\</span></div>
+      <div class="term-line" style="padding-left:18px">-H "Authorization: Bearer sk_live_••••"<span class="term-cursor"></span></div>
+      <span class="term-out">{ "lat": 40.7128, "lng": -74.0060, "status": <span class="ok">"ok"</span> }</span>`;
+    }
+  }
+
+  // ===================== ACCOUNT VIEW =====================
+  let accountTab = 'purchases';
+  let accountData = { purchases: [], api_keys: [] };
+
+  async function loadAccountData() {
+    try {
+      const [purchasesRes, keysRes] = await Promise.all([
+        api('/api/account/purchases'),
+        api('/api/account/api-keys'),
+      ]);
+      accountData.purchases = purchasesRes.purchases;
+      accountData.api_keys = keysRes.api_keys;
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  async function revokeKey(id) {
+    if (!confirm('Revoke this API key? Requests using it will stop working immediately.')) return;
+    try {
+      await api(`/api/account/api-keys/${id}/revoke`, { method: 'POST' });
+      toast('API key revoked.');
+      await loadAccountData();
+      render();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  function setAccountTab(tab) {
+    accountTab = tab;
+    render();
+  }
+
+  function renderAccountView() {
+    if (!state.user) {
+      return `
+        <div class="account-view wrap">
+          <div class="empty-state">Sign in to view your account.</div>
+        </div>
+      `;
+    }
+
+    const purchasesRows = accountData.purchases.length
+      ? accountData.purchases.map((p) => `
+          <tr>
+            <td>${p.name}</td>
+            <td><span class="key-display">${p.type}</span></td>
+            <td><span class="status-badge ${p.status}">${p.status}</span></td>
+            <td>${new Date(p.created_at).toLocaleDateString()}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="4" class="empty-state">No purchases yet — browse the catalog to get started.</td></tr>`;
+
+    const keysRows = accountData.api_keys.length
+      ? accountData.api_keys.map((k) => `
+          <tr>
+            <td>${k.name}</td>
+            <td><span class="key-display">${k.key_display}</span></td>
+            <td><span class="status-badge ${k.revoked ? 'revoked' : 'active'}">${k.revoked ? 'revoked' : 'active'}</span></td>
+            <td>${!k.revoked ? `<button class="btn btn-sm" onclick="revokeKey('${k.id}')">Revoke</button>` : ''}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="4" class="empty-state">No API keys issued yet — buy an API product to get one.</td></tr>`;
+
+    return `
+      <div class="account-view wrap">
+        <h2 style="margin-bottom: 8px;">Your account</h2>
+        <p class="section-desc" style="margin-bottom: 32px;">${state.user.email}</p>
+
+        <div class="account-tabs">
+          <button class="account-tab ${accountTab === 'purchases' ? 'active' : ''}" onclick="setAccountTab('purchases')">Purchases</button>
+          <button class="account-tab ${accountTab === 'keys' ? 'active' : ''}" onclick="setAccountTab('keys')">API keys</button>
+        </div>
+
+        ${accountTab === 'purchases' ? `
+          <table class="data-table">
+            <thead><tr><th>Product</th><th>Type</th><th>Status</th><th>Purchased</th></tr></thead>
+            <tbody>${purchasesRows}</tbody>
+          </table>
+        ` : `
+          <table class="data-table">
+            <thead><tr><th>Product</th><th>Key</th><th>Status</th><th></th></tr></thead>
+            <tbody>${keysRows}</tbody>
+          </table>
+        `}
+      </div>
+    `;
+  }
+
+  // ===================== VIEW ROUTING =====================
+  async function showView(view) {
+    state.currentView = view;
+    if (view === 'account') {
+      if (!state.user) {
+        openAuthModal('login');
+        state.currentView = 'catalog';
+        render();
+        return;
+      }
+      await loadAccountData();
+    }
+    render();
+    window.scrollTo({ top: 0 });
+  }
+
+  function render() {
+    const main = document.getElementById('mainContent');
+    main.innerHTML = state.currentView === 'account' ? renderAccountView() : renderCatalogView();
+  }
+
+  // ===================== BACKEND HEALTH CHECK =====================
+  async function checkBackend() {
+    const statusEl = document.getElementById('apiStatus');
+    try {
+      await api('/api/health');
+      statusEl.textContent = `backend: connected (${API_BASE})`;
+    } catch (err) {
+      statusEl.textContent = `backend: unreachable — start the server at ${API_BASE}`;
+      statusEl.style.color = 'var(--danger)';
+    }
+  }
+
+  // ===================== INIT =====================
+  (async function init() {
+    renderNav();
+    render();
+    checkBackend();
+    await loadProducts();
+    render();
+  })();
+</script>
+
+</body>
+</html>

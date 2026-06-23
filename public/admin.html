@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>admin — registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0E14; --panel: #10151D; --panel-hover: #141B25;
+    --border: #1C2733; --border-light: #263240;
+    --text: #E8ECF1; --text-dim: #7C8B9E; --text-dimmer: #4D5A6B;
+    --accent: #5EEAD4; --accent-dim: rgba(94, 234, 212, 0.12); --accent-glow: rgba(94, 234, 212, 0.25);
+    --warn: #F0B255; --danger: #F0746A;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Inter', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button, input, select { font-family: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .hidden { display: none !important; }
+
+  /* Login gate */
+  .gate {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .gate-box {
+    background: var(--panel); border: 1px solid var(--border-light); border-radius: 12px;
+    padding: 36px; width: 100%; max-width: 380px;
+  }
+  .gate-box h1 {
+    font-family: var(--mono); font-size: 18px; margin-bottom: 4px;
+  }
+  .gate-box .sub { color: var(--text-dimmer); font-size: 13px; margin-bottom: 24px; font-family: var(--mono); }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-bottom: 7px; }
+  .field input {
+    width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-light);
+    border-radius: 6px; color: var(--text); font-size: 14px;
+  }
+  .field input:focus { border-color: var(--accent); outline: none; }
+  .btn {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    padding: 10px 18px; border-radius: 6px; border: 1px solid var(--border-light);
+    background: transparent; color: var(--text); transition: all 0.15s ease;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #06201C; border: 1px solid var(--accent); }
+  .btn-primary:hover { box-shadow: 0 0 0 3px var(--accent-glow); color: #06201C; }
+  .btn-danger { border-color: rgba(240, 116, 106, 0.4); color: var(--danger); }
+  .btn-danger:hover { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(240, 116, 106, 0.2); }
+  .btn-full { width: 100%; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .error-box {
+    background: rgba(240, 116, 106, 0.1); border: 1px solid rgba(240, 116, 106, 0.3);
+    color: var(--danger); font-size: 13px; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px;
+  }
+
+  /* Shell */
+  .shell { display: none; min-height: 100vh; }
+  .shell.active { display: flex; }
+  .sidebar {
+    width: 220px; background: var(--panel); border-right: 1px solid var(--border);
+    padding: 24px 16px; flex-shrink: 0; display: flex; flex-direction: column;
+  }
+  .sidebar .logo { font-family: var(--mono); font-weight: 700; font-size: 15px; padding: 0 8px 24px; }
+  .sidebar .logo .bracket { color: var(--accent); }
+  .nav-item {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text-dim); font-family: var(--mono); font-size: 13px; padding: 10px 12px;
+    border-radius: 6px; margin-bottom: 2px; transition: all 0.15s ease;
+  }
+  .nav-item:hover { background: var(--panel-hover); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); }
+  .sidebar-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
+  .sidebar-foot .email { font-size: 12px; color: var(--text-dimmer); padding: 0 12px 10px; word-break: break-all; }
+
+  .main { flex-grow: 1; padding: 32px 40px; overflow-y: auto; max-height: 100vh; }
+  .page-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
+  .page-head h2 { font-family: var(--mono); font-size: 22px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 32px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .stat-card .num { font-family: var(--mono); font-size: 24px; font-weight: 700; }
+  .stat-card .label { font-size: 12px; color: var(--text-dimmer); margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th { text-align: left; font-family: var(--mono); font-size: 11px; color: var(--text-dimmer); padding: 12px 16px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.03em; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--panel-hover); }
+  .mono { font-family: var(--mono); font-size: 13px; color: var(--text-dim); }
+  .badge { font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 10px; }
+  .badge.active { background: var(--accent-dim); color: var(--accent); }
+  .badge.pending { background: rgba(240, 178, 85, 0.12); color: var(--warn); }
+  .badge.revoked, .badge.canceled { background: rgba(240, 116, 106, 0.12); color: var(--danger); }
+  .badge.app_onetime, .badge.app_subscription { color: var(--accent); }
+  .badge.api_metered { color: var(--warn); }
+
+  .toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 8px; }
+  .empty-row { text-align: center; color: var(--text-dimmer); font-family: var(--mono); font-size: 13px; padding: 32px; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(5, 7, 11, 0.7); backdrop-filter: blur(4px);
+    z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border-light); border-radius: 12px;
+    width: 100%; max-width: 460px; padding: 28px; max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-family: var(--mono); font-size: 16px; margin-bottom: 20px; }
+  .modal-close { float: right; background: none; border: none; color: var(--text-dim); font-size: 20px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  select {
+    width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-light);
+    border-radius: 6px; color: var(--text); font-size: 14px;
+  }
+  textarea {
+    width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-light);
+    border-radius: 6px; color: var(--text); font-size: 14px; font-family: var(--sans); resize: vertical; min-height: 70px;
+  }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--panel);
+    border: 1px solid var(--border-light); border-radius: 8px; padding: 14px 18px;
+    font-size: 14px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5); z-index: 200; max-width: 360px;
+  }
+  .toast.error { border-color: rgba(240, 116, 106, 0.4); color: var(--danger); }
+  .toast.success { border-color: rgba(94, 234, 212, 0.4); color: var(--accent); }
+
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .sidebar { width: 72px; }
+    .sidebar .logo, .sidebar-foot .email { display: none; }
+    .nav-item { text-align: center; font-size: 16px; }
+    .main { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gateView">
+  <div class="gate-box">
+    <h1>{ registry } admin</h1>
+    <div class="sub">Authorized personnel only</div>
+    <div class="error-box hidden" id="loginError"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@registry.dev" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" id="loginBtn">Sign in</button>
+  </div>
+</div>
+
+<div class="shell" id="shellView">
+  <div class="sidebar">
+    <div class="logo"><span class="bracket">{</span>registry<span class="bracket">}</span> admin</div>
+    <button class="nav-item active" data-page="overview" onclick="setPage('overview')">Overview</button>
+    <button class="nav-item" data-page="products" onclick="setPage('products')">Products</button>
+    <button class="nav-item" data-page="users" onclick="setPage('users')">Users</button>
+    <button class="nav-item" data-page="purchases" onclick="setPage('purchases')">Purchases</button>
+    <button class="nav-item" data-page="keys" onclick="setPage('keys')">API keys</button>
+    <div class="sidebar-foot">
+      <div class="email" id="adminEmailDisplay"></div>
+      <button class="btn btn-full btn-sm" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+  <div class="main" id="mainPane">
+    <!-- injected per page -->
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script>
+  const API_BASE = 'http://localhost:4242';
+  let token = localStorage.getItem('registry_admin_token') || null;
+  let adminUser = JSON.parse(localStorage.getItem('registry_admin_user') || 'null');
+  let currentPage = 'overview';
+  let cache = {};
+
+  async function api(path, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    return data;
+  }
+
+  function toast(msg, type = 'success') {
+    const host = document.getElementById('toastHost');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  function money(cents) {
+    if (cents === null || cents === undefined) return '—';
+    return `$${(cents / 100).toFixed(2)}`;
+  }
+
+  // ===================== AUTH =====================
+  async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errBox = document.getElementById('loginError');
+    errBox.classList.add('hidden');
+
+    try {
+      const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      if (!data.user.is_admin) {
+        errBox.textContent = 'This account does not have admin access.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+      token = data.token;
+      adminUser = data.user;
+      localStorage.setItem('registry_admin_token', token);
+      localStorage.setItem('registry_admin_user', JSON.stringify(adminUser));
+      enterShell();
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('hidden');
+    }
+  }
+
+  function logout() {
+    token = null;
+    adminUser = null;
+    localStorage.removeItem('registry_admin_token');
+    localStorage.removeItem('registry_admin_user');
+    document.getElementById('shellView').classList.remove('active');
+    document.getElementById('gateView').classList.remove('hidden');
+  }
+
+  async function enterShell() {
+    // Re-verify against the server, not just trusting localStorage — if the
+    // token expired or admin was revoked server-side, this catches it.
+    try {
+      await api('/api/admin/stats');
+    } catch (err) {
+      toast('Session invalid — please sign in again.', 'error');
+      logout();
+      return;
+    }
+    document.getElementById('gateView').classList.add('hidden');
+    document.getElementById('shellView').classList.add('active');
+    document.getElementById('adminEmailDisplay').textContent = adminUser.email;
+    setPage('overview');
+  }
+
+  // ===================== PAGE ROUTING =====================
+  function setPage(page) {
+    currentPage = page;
+    document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.page === page));
+    renderPage();
+  }
+
+  async function renderPage() {
+    const pane = document.getElementById('mainPane');
+    pane.innerHTML = `<div class="empty-row">Loading…</div>`;
+    try {
+      if (currentPage === 'overview') await renderOverview();
+      else if (currentPage === 'products') await renderProducts();
+      else if (currentPage === 'users') await renderUsers();
+      else if (currentPage === 'purchases') await renderPurchases();
+      else if (currentPage === 'keys') await renderKeys();
+    } catch (err) {
+      pane.innerHTML = `<div class="empty-row">${err.message}</div>`;
+    }
+  }
+
+  // ===================== OVERVIEW =====================
+  async function renderOverview() {
+    const stats = await api('/api/admin/stats');
+    document.getElementById('mainPane').innerHTML = `
+      <div class="page-head"><h2>Overview</h2></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="num">${stats.total_users}</div><div class="label">total users</div></div>
+        <div class="stat-card"><div class="num">${stats.total_products}</div><div class="label">active products</div></div>
+        <div class="stat-card"><div class="num">${stats.active_purchases}</div><div class="label">active purchases</div></div>
+        <div class="stat-card"><div class="num">${stats.total_api_calls}</div><div class="label">total API calls</div></div>
+        <div class="stat-card"><div class="num">${money(stats.estimated_revenue_cents)}</div><div class="label">est. recurring revenue</div></div>
+      </div>
+      <p class="mono" style="color: var(--text-dimmer); font-size: 12px;">
+        Revenue estimate is based on current product prices × active purchases — it's a snapshot, not a ledger of actual historical charges. For real accounting, reconcile against your Stripe dashboard.
+      </p>
+    `;
+  }
+
+  // ===================== PRODUCTS =====================
+  async function renderProducts() {
+    const { products } = await api('/api/admin/products');
+    cache.products = products;
+
+    const rows = products.length ? products.map((p) => `
+      <tr>
+        <td><strong>${p.name}</strong><br><span class="mono">${p.slug}</span></td>
+        <td><span class="badge ${p.type}">${p.type.replace('_', ' ')}</span></td>
+        <td class="mono">${p.type === 'api_metered' ? `$${Number(p.price_per_call_cents).toFixed(4)}/call` : money(p.price_cents) + (p.type === 'app_subscription' ? '/mo' : '')}</td>
+        <td><span class="badge ${p.active ? 'active' : 'revoked'}">${p.active ? 'active' : 'inactive'}</span></td>
+        <td>
+          <button class="btn btn-sm" onclick="openProductModal('${p.id}')">Edit</button>
+          ${p.active ? `<button class="btn btn-sm btn-danger" onclick="deactivateProduct('${p.id}')">Deactivate</button>` : ''}
+        </td>
+      </tr>
+    `).join('') : `<tr><td colspan="5" class="empty-row">No products yet.</td></tr>`;
+
+    document.getElementById('mainPane').innerHTML = `
+      <div class="page-head">
+        <h2>Products</h2>
+        <button class="btn btn-primary" onclick="openProductModal()">+ New product</button>
+      </div>
+      <table>
+        <thead><tr><th>Product</th><th>Type</th><th>Price</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function openProductModal(productId = null) {
+    const product = productId ? cache.products.find((p) => p.id === productId) : null;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'productModalOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div class="modal">
+        <button class="modal-close" onclick="document.getElementById('productModalOverlay').remove()">×</button>
+        <h3>${product ? 'Edit product' : 'New product'}</h3>
+        <div class="field">
+          <label>Slug ${product ? '(locked)' : ''}</label>
+          <input id="pSlug" value="${product?.slug || ''}" ${product ? 'disabled' : ''} placeholder="my-product">
+        </div>
+        <div class="field">
+          <label>Name</label>
+          <input id="pName" value="${product?.name || ''}" placeholder="My Product">
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea id="pDesc">${product?.description || ''}</textarea>
+        </div>
+        ${!product ? `
+        <div class="field">
+          <label>Type</label>
+          <select id="pType" onchange="toggleProductPriceFields()">
+            <option value="app_onetime">App — one-time purchase</option>
+            <option value="app_subscription">App — subscription</option>
+            <option value="api_metered">API — metered (pay per call)</option>
+          </select>
+        </div>` : `<input type="hidden" id="pType" value="${product.type}">`}
+        <div class="row-2">
+          <div class="field" id="priceFlatField">
+            <label>Price (USD)</label>
+            <input id="pPriceCents" type="number" step="0.01" value="${product?.price_cents ? (product.price_cents/100).toFixed(2) : ''}" placeholder="29.00">
+          </div>
+          <div class="field" id="pricePerCallField">
+            <label>Price per call (¢, e.g. 0.08 = $0.0008)</label>
+            <input id="pPriceCall" type="number" step="0.0001" value="${product?.price_per_call_cents ?? ''}" placeholder="0.08">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveProduct(${product ? `'${product.id}'` : 'null'})">${product ? 'Save changes' : 'Create product'}</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    if (!product) toggleProductPriceFields();
+    else {
+      document.getElementById('priceFlatField').style.display = product.type === 'api_metered' ? 'none' : 'block';
+      document.getElementById('pricePerCallField').style.display = product.type === 'api_metered' ? 'block' : 'none';
+    }
+  }
+
+  function toggleProductPriceFields() {
+    const type = document.getElementById('pType').value;
+    document.getElementById('priceFlatField').style.display = type === 'api_metered' ? 'none' : 'block';
+    document.getElementById('pricePerCallField').style.display = type === 'api_metered' ? 'block' : 'none';
+  }
+
+  async function saveProduct(productId) {
+    const type = document.getElementById('pType').value;
+    const priceUsd = document.getElementById('pPriceCents').value;
+    const priceCallUsd = document.getElementById('pPriceCall').value;
+
+    const payload = {
+      name: document.getElementById('pName').value.trim(),
+      description: document.getElementById('pDesc').value.trim(),
+      price_cents: priceUsd ? Math.round(parseFloat(priceUsd) * 100) : null,
+      price_per_call_cents: priceCallUsd ? parseFloat(priceCallUsd) : null,
+    };
+
+    try {
+      if (productId) {
+        await api(`/api/admin/products/${productId}`, { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Product updated.');
+      } else {
+        payload.slug = document.getElementById('pSlug').value.trim();
+        payload.type = type;
+        if (!payload.slug || !payload.name) {
+          toast('Slug and name are required.', 'error');
+          return;
+        }
+        await api('/api/admin/products', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Product created.');
+      }
+      document.getElementById('productModalOverlay').remove();
+      renderProducts();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  async function deactivateProduct(id) {
+    if (!confirm('Deactivate this product? It will be hidden from the storefront but purchase history is kept.')) return;
+    try {
+      await api(`/api/admin/products/${id}`, { method: 'DELETE' });
+      toast('Product deactivated.');
+      renderProducts();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  // ===================== USERS =====================
+  async function renderUsers() {
+    const { users } = await api('/api/admin/users');
+    const rows = users.length ? users.map((u) => `
+      <tr>
+        <td>${u.email}${u.is_admin ? ' <span class="badge active">admin</span>' : ''}</td>
+        <td class="mono">${u.active_purchases}</td>
+        <td class="mono">${u.active_keys}</td>
+        <td class="mono">${new Date(u.created_at).toLocaleDateString()}</td>
+      </tr>
+    `).join('') : `<tr><td colspan="4" class="empty-row">No users yet.</td></tr>`;
+
+    document.getElementById('mainPane').innerHTML = `
+      <div class="page-head"><h2>Users</h2></div>
+      <table>
+        <thead><tr><th>Email</th><th>Active purchases</th><th>Active keys</th><th>Joined</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // ===================== PURCHASES =====================
+  async function renderPurchases() {
+    const { purchases } = await api('/api/admin/purchases');
+    const rows = purchases.length ? purchases.map((p) => `
+      <tr>
+        <td>${p.product_name}</td>
+        <td class="mono">${p.user_email}</td>
+        <td><span class="badge ${p.type}">${p.type.replace('_', ' ')}</span></td>
+        <td><span class="badge ${p.status}">${p.status}</span></td>
+        <td class="mono">${new Date(p.created_at).toLocaleDateString()}</td>
+      </tr>
+    `).join('') : `<tr><td colspan="5" class="empty-row">No purchases yet.</td></tr>`;
+
+    document.getElementById('mainPane').innerHTML = `
+      <div class="page-head"><h2>Purchases</h2></div>
+      <table>
+        <thead><tr><th>Product</th><th>Buyer</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // ===================== API KEYS =====================
+  async function renderKeys() {
+    const { api_keys } = await api('/api/admin/api-keys');
+    const rows = api_keys.length ? api_keys.map((k) => `
+      <tr>
+        <td>${k.product_name}</td>
+        <td class="mono">${k.user_email}</td>
+        <td class="mono">${k.key_prefix}••••••••</td>
+        <td class="mono">${k.total_calls}</td>
+        <td><span class="badge ${k.revoked ? 'revoked' : 'active'}">${k.revoked ? 'revoked' : 'active'}</span></td>
+        <td>${!k.revoked ? `<button class="btn btn-sm btn-danger" onclick="revokeKey('${k.id}')">Revoke</button>` : ''}</td>
+      </tr>
+    `).join('') : `<tr><td colspan="6" class="empty-row">No API keys issued yet.</td></tr>`;
+
+    document.getElementById('mainPane').innerHTML = `
+      <div class="page-head"><h2>API keys</h2></div>
+      <table>
+        <thead><tr><th>Product</th><th>Owner</th><th>Key</th><th>Total calls</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  async function revokeKey(id) {
+    if (!confirm('Revoke this API key? It will stop working immediately.')) return;
+    try {
+      await api(`/api/admin/api-keys/${id}/revoke`, { method: 'POST' });
+      toast('Key revoked.');
+      renderKeys();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  // ===================== INIT =====================
+  document.getElementById('loginBtn').addEventListener('click', handleLogin);
+  document.getElementById('loginPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+
+  if (token && adminUser) {
+    enterShell();
+  }
+</script>
+
+</body>
+</html>
